@@ -1,15 +1,10 @@
 import discord
 import pyktok
-import re
 import os
-import json
-import requests
-import browser_cookie3
-import instascrape
-from bs4 import BeautifulSoup
-from requests_html import HTMLSession
 
-SESSION_ID = ""
+f = open("config.txt", "r")
+
+SESSION_ID = f.readline()
 
 tt_headers = {'Accept-Encoding': 'gzip, deflate, sdch',
            'Accept-Language': 'en-US,en;q=0.8',
@@ -18,15 +13,10 @@ tt_headers = {'Accept-Encoding': 'gzip, deflate, sdch',
            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
            'Cache-Control': 'max-age=0',
            'Connection': 'keep-alive'}
-ig_headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)\
-    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.74 \
-    Safari/537.36 Edg/79.0.309.43",
-    "cookie": f'sessionid={SESSION_ID};'
-}
-
 
 url_regex = '(?<=\.com/)(.+?)(?=\?|$)'
+
+pyktok.specify_browser("firefox")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -40,19 +30,23 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if "vm.tiktok.com/" in message.content:
-        await message.delete()
-        await message.channel.send("Found a tiktok")
-        vid_id = re.search(r"\b\w{9,9}\b", message.content).group(0)
+    if "tiktok.com/" in message.content:
+        #vid_id = re.search(r"\b\w{9,9}\b", message.content).group(0)
+        print(pyktok.get_tiktok_json(message.content))
         pyktok.save_tiktok(message.content, True, "", "firefox")
-        await message.channel.send(f"Sent by {message.author.nick}", file=discord.File(f"{vid_id}_.mp4"))
-    elif "instagram.com/reel/" in message.content:
-        await message.channel.send("Found a reel")
-        resp = requests.get()
-        await message.channel.send(f"Sent by {message.author.nick}", file=discord.File("reel.mp4"))
+        for file in os.listdir("."):
+            if os.path.isfile(file) and ".mp4" in file:
+                outfile = file
+        await message.channel.send(f"Sent by {message.author.name}", file=discord.File(outfile))
+        await message.delete()
+        for file in os.listdir("."):
+            if os.path.isfile(file) and (".mp4" in file or ".jpg" in file):
+                os.remove(file)
+    if "x.com" in message.content and not message.author.bot:
+        await message.channel.send(message.author.name + ": " + str(message.content).replace("x.com", "fixvx.com"))
+        await message.delete()
+    if "twitter.com" in message.content and not message.author.bot:
+        await message.channel.send(message.author.name + ": " + str(message.content).replace("twitter.com", "fxtwitter.com"))
+        await message.delete()
 
-
-
-
-f = open("config.txt", "r")
-client.run(f.read())
+client.run(f.readline())

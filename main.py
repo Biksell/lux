@@ -9,7 +9,7 @@ import instascrape
 from bs4 import BeautifulSoup
 from requests_html import HTMLSession
 
-SESSION_ID = "18bfb002e57-74dec7"
+SESSION_ID = ""
 
 tt_headers = {'Accept-Encoding': 'gzip, deflate, sdch',
            'Accept-Language': 'en-US,en;q=0.8',

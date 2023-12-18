@@ -24,7 +24,6 @@ tt_headers = {'Accept-Encoding': 'gzip, deflate, sdch',
 
 url_regex = '(?<=\.com/)(.+?)(?=\?|$)'
 
-pyktok.specify_browser("firefox")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -42,15 +41,18 @@ def clean_downloads():
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user}")
-    t = threading.Thread(target=start_ig_downloader, daemon=True)
-    t.start()
+    #t = threading.Thread(target=start_ig_downloader, daemon=True)
+    #t.start()
 
 @client.event
 async def on_message(message):
-    if "tiktok.com/" in message.content:
+    if "tiktok.com/" in message.content: # Got rate limited / banned, need to find another way to do this
+        pyktok.specify_browser("firefox")
         sent = False
         is_img = False
-        while not sent and not is_img:
+        count = 0
+        while not sent and not is_img and count < 3:
+            count += 1
             try:
                 pyktok.save_tiktok(message.content, True, "", "firefox")
                 for file in os.listdir("."):
@@ -65,13 +67,14 @@ async def on_message(message):
             await message.delete()
         clean_downloads()
 
-    if "www.instagram.com" in message.content:
-        print("Found reel")
+    if "www.instagram.com" in message.content and not message.author.bot:
+        # Deprecated, TODO add separate functionality to download shit
+        '''print("Found reel")
         r = requests.get(f"http://localhost:3000/api/video?url={message.content}")
         print(r.status_code)
         raw_link = json.loads(r.text)["data"]["videoUrl"]
-        urllib.request.urlretrieve(raw_link, "reel.mp4")
-        await message.channel.send(f"Sent by {message.author.name}", file=discord.File("reel.mp4"))
+        urllib.request.urlretrieve(raw_link, "reel.mp4")'''
+        await message.channel.send(message.author.name + ": " + str(message.content).replace("instagram.com", "ddinstagram.com"))
         await message.delete()
         clean_downloads()
 

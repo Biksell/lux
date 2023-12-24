@@ -2,13 +2,10 @@
 # Credit for Instagram Reel scraping goes to https://github.com/riad-azz/instagram-video-downloader
 
 import discord
-import pyktok
 import os
-import json
-import requests
 import subprocess
-import threading
-import urllib.request
+import re
+import ffmpeg
 
 f = open("config.txt", "r")
 
@@ -35,7 +32,7 @@ def start_ig_downloader():
 
 def clean_downloads():
     for file in os.listdir("."):
-            if os.path.isfile(file) and (".mp4" in file or ".jpeg" in file):
+            if os.path.isfile(file) and (".mp4" in file or ".jpeg" in file or ".mp3" in file):
                 os.remove(file)
 
 @client.event
@@ -47,24 +44,20 @@ async def on_ready():
 @client.event
 async def on_message(message):
     if "tiktok.com/" in message.content: # Got rate limited / banned, need to find another way to do this
-        pyktok.specify_browser("firefox")
-        sent = False
-        is_img = False
-        count = 0
-        while not sent and not is_img and count < 3:
-            count += 1
-            try:
-                pyktok.save_tiktok(message.content, True, "", "firefox")
-                for file in os.listdir("."):
-                    if os.path.isfile(file) and ".mp4" in file:
-                        outfile = file
-                    if ".jpeg" in file:
-                        is_img = True
-                await message.channel.send(f"Sent by {message.author.name}", file=discord.File(outfile))
-            except:
-                continue
-            sent = True
-            await message.delete()
+        link = str(re.findall(r'\bhttps?://.*[(tiktok|douyin)]\S+', message.content)[0])
+        msg = await message.channel.send("Downloading video...")
+        subprocess.run(f'yt-dlp {link} -o "tiktok.%(ext)s"', shell=True, cwd="C:\programming\lux")
+        msg = await msg.edit(content="Converting video...")
+        for file in os.listdir("."):
+            if ".mp3" in file:
+                msg = await msg.edit("Slideshows are not supported as of yet")
+                return
+        input = ffmpeg.input("tiktok.mp4")
+        out = ffmpeg.output(input, "out.mp4", acodec="copy", vcodec="libx264")
+        ffmpeg.run(out)
+        await message.channel.send(f"Sent by {message.author.name}", file=discord.File("out.mp4"))
+        await msg.delete()
+        await message.delete()
         clean_downloads()
 
     if "www.instagram.com" in message.content and not message.author.bot:
@@ -84,5 +77,8 @@ async def on_message(message):
     if "twitter.com" in message.content and not message.author.bot:
         await message.channel.send(message.author.name + ": " + str(message.content).replace("twitter.com", "fxtwitter.com"))
         await message.delete()
+
+    if "Thanks Lux" in message.content():
+        await message.channel.send(f"It's my plesasure, {message.author.name}")
 
 client.run(f.readline())

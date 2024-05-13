@@ -6,6 +6,8 @@ import os
 import subprocess
 import re
 import ffmpeg
+import random
+import string
 
 f = open("config.txt", "r")
 
@@ -43,33 +45,51 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if "tiktok.com/" in message.content: # Got rate limited / banned, need to find another way to do this
-        link = str(re.findall(r'\bhttps?://.*[(tiktok|douyin)]\S+', message.content)[0])
+    if "tiktok.com/" in message.content or "www.instagram.com/reel" in message.content: # Got rate limited / banned, need to find another way to do this
+        #link = re.findall(r'(https?://(?:www\.)?(?:instagram\.com/reel|tiktok\.com)\S*?/p/\w{11}/?)', message.content)
+        link = message.content
         msg = await message.channel.send("Downloading video...")
-        subprocess.run(f'yt-dlp {link} -o "tiktok.%(ext)s"', shell=True, cwd="C:\programming\lux")
-        msg = await msg.edit(content="Converting video...")
+        command = None
+        name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+        if "tiktok" in link:
+            command = f'yt-dlp {link} -o "{name}.%(ext)s" --force-overwrites"' #-f "best[format_id^=h264][format_id$=-1]
+        elif "instagram" in link:
+            command = f'yt-dlp {link} -o "{name}.%(ext)s" --force-overwrites --cookies-from-browser firefox'
+        subprocess.run(command, shell=True, cwd="C:\programming\lux")
         for file in os.listdir("."):
             if ".mp3" in file:
-                msg = await msg.edit("Slideshows are not supported as of yet")
-                return
+                msg = await msg.edit(content="Slideshows are not supported as of yet")
+                clean_downloads()
+                return None
+        msg = await msg.edit(content="Uploading video...")
+        '''
         input = ffmpeg.input("tiktok.mp4")
-        out = ffmpeg.output(input, "out.mp4", acodec="copy", vcodec="libx264")
-        ffmpeg.run(out)
-        await message.channel.send(f"Sent by {message.author.name}", file=discord.File("out.mp4"))
+        out = ffmpeg.output(input, "out.mp4", acodec="copy", vcodec="libx264", preset="ultrafast")
+        ffmpeg.run(out)'''
+        try:
+            await message.channel.send(f"Sent by {message.author.name}", file=discord.File(f'{name}.mp4'))
+        except Exception as e:
+            msg = await msg.edit(content = e)
+            if "instagram" in link:
+                msg = await msg.edit(content="File too large, converting...")
+                subprocess.run(f"ffmpeg -i {name}.mp4 -vcodec libx264 -crf 51 -preset ultrafast out.mp4")
+                name = "out"
+                await message.channel.send(f"Sent by {message.author.name} (downscaled)", file=discord.File(f'{name}.mp4'))
         await msg.delete()
         await message.delete()
         clean_downloads()
 
-    if "www.instagram.com" in message.content and not message.author.bot:
-        # Deprecated, TODO add separate functionality to download shit
-        '''print("Found reel")
+    ''' #deprecated
+    if "www.instagram.com/reel" in message.content and not message.author.bot:
+        print("Found reel")
         r = requests.get(f"http://localhost:3000/api/video?url={message.content}")
         print(r.status_code)
         raw_link = json.loads(r.text)["data"]["videoUrl"]
-        urllib.request.urlretrieve(raw_link, "reel.mp4")'''
+        urllib.request.urlretrieve(raw_link, "reel.mp4")
         await message.channel.send(message.author.name + ": " + str(message.content).replace("instagram.com", "ddinstagram.com"))
         await message.delete()
         clean_downloads()
+    '''
 
     if "x.com" in message.content and not message.author.bot:
         await message.channel.send(message.author.name + ": " + str(message.content).replace("x.com", "fixvx.com"))
@@ -78,7 +98,7 @@ async def on_message(message):
         await message.channel.send(message.author.name + ": " + str(message.content).replace("twitter.com", "fxtwitter.com"))
         await message.delete()
 
-    if "Thanks Lux" in message.content():
-        await message.channel.send(f"It's my plesasure, {message.author.name}")
+    if "Thanks Lux" in message.content:
+        await message.channel.send(f"It's my pleasure, {message.author.name}")
 
 client.run(f.readline())
